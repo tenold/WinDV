@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l \"/c/Users/rober/Downloads/WinDV-src-1.2.3/WinDV/\"*.cpp \"/c/Users/rober/Downloads/WinDV-src-1.2.3/WinDV/\"*.h)",
+      "Bash(grep -n \"CBaseFilter\\\\|CBasePin\\\\|CBaseInputPin\\\\|CBaseOutputPin\\\\|streams.h\" \"/c/Users/rober/Downloads/WinDV-src-1.2.3/WinDV/\"*.h \"/c/Users/rober/Downloads/WinDV-src-1.2.3/WinDV/\"*.cpp)",
+      "Bash(grep -n \"MultiByteToWideChar\\\\|WideCharToMultiByte\\\\|CP_ACP\\\\|lstrcpy\\\\|strtok\" \"/c/Users/rober/Downloads/WinDV-src-1.2.3/WinDV/\"*.cpp)"
+    ]
+  }
+}
