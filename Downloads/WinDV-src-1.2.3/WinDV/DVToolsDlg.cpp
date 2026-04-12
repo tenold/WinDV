@@ -335,18 +335,17 @@ BOOL CDVToolsDlg::OnInitDialog()
 	m_nSuffixDigits = AfxGetApp()->GetProfileInt("Capture", "SuffixDigits", 2);
 
 	char *delim = " \t\n";
-	char *strtok_ctx = NULL;
 	CString err;
-	LPSTR arg = strtok_s(AfxGetApp()->m_lpCmdLine, delim, &strtok_ctx);
+	LPSTR arg = strtok(AfxGetApp()->m_lpCmdLine, delim);
 	if (arg) {
 		if (strcmp(arg,"capture")==0) {
 			m_toolTab.SetCurSel(0);
 			LRESULT result;
 			OnSelchangeToolTab(NULL, &result);
-			arg = strtok_s(NULL, delim, &strtok_ctx);
+			arg = strtok(NULL, delim);
 			if (arg && strcmp(arg,"-exit")==0) {
 				m_exitOnFinish = 1;
-				arg = strtok_s(NULL, delim, &strtok_ctx);
+				arg = strtok(NULL, delim);
 			}
 			if (!arg) {
 				CString tmp; tmp.LoadString(IDS_USAGE);
@@ -388,7 +387,7 @@ timusec:
 					if (*arg) goto timerr;
 				}
 
-				arg = strtok_s(NULL, delim, &strtok_ctx);
+				arg = strtok(NULL, delim);
 				if (!arg) {
 timerr:
 					CString tmp; tmp.LoadString(IDS_USAGE);
@@ -399,7 +398,7 @@ timerr:
 					t = t * 10000000 + us;
 
 					CString file = arg;
-					arg = strtok_s(NULL, delim, &strtok_ctx);
+					arg = strtok(NULL, delim);
 					if (arg) {
 						CString tmp; tmp.LoadString(IDS_USAGE);
 						err += tmp;
@@ -424,10 +423,10 @@ timerr:
 			m_toolTab.SetCurSel(1);
 			LRESULT result;
 			OnSelchangeToolTab(NULL, &result);
-			arg = strtok_s(NULL, delim, &strtok_ctx);
+			arg = strtok(NULL, delim);
 			if (arg && strcmp(arg,"-exit")==0) {
 				m_exitOnFinish = 1;
-				arg = strtok_s(NULL, delim, &strtok_ctx);
+				arg = strtok(NULL, delim);
 			}
 			if (!arg) {
 				CString tmp; tmp.LoadString(IDS_USAGE);
@@ -438,7 +437,7 @@ timerr:
 				while (arg) {
 					if (!files.IsEmpty()) files += " | ";
 					files += arg;
-					arg = strtok_s(NULL, delim, &strtok_ctx);
+					arg = strtok(NULL, delim);
 				}
 				TRY {
 					m_FSRC.SetWindowText(files);

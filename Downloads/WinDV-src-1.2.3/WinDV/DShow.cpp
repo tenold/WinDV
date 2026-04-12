@@ -874,14 +874,14 @@ void CMonitor::HandleFrame(REFERENCE_TIME duration, BYTE *data, int len)
 
 void CMonitor::MonitoringThread()
 {
-	ULONGLONG ticks = 0;
+	DWORD ticks = 0;
 	for(;;) {
 		IMediaSample *pSample = NULL;
 		HRESULT hr;
 		hr = m_outputFilter->m_output->GetDeliveryBuffer(&pSample, NULL, NULL, 0);
 		if (hr == NOERROR) {
-			ticks = GetTickCount64() - ticks;
-			Sleep((DWORD)(ticks < 200 ? ticks + 10 : 200));
+			ticks = GetTickCount() - ticks;
+			Sleep(ticks < 200 ? ticks + 10 : 200);
 			m_sample = pSample;
 			CSingleLock lck(&m_ev);
 			lck.Lock();
@@ -889,7 +889,7 @@ void CMonitor::MonitoringThread()
 				pSample->Release();
 				return;
 			}
-			ticks = GetTickCount64();
+			ticks = GetTickCount();
 			m_outputFilter->m_output->Deliver(pSample);
 			pSample->Release();
 			pSample = NULL;
