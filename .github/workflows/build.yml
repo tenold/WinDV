@@ -1,0 +1,111 @@
+name: Build WinDV
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Download DirectShow BaseClasses headers
+        shell: pwsh
+        run: |
+          $baseUrl = 'https://raw.githubusercontent.com/microsoft/Windows-classic-samples/main/Samples/Win7Samples/multimedia/directshow/baseclasses'
+          $outDir  = 'Downloads/WinDV-src-1.2.3/baseclasses'
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+
+          # Headers available in the Windows-classic-samples repo
+          $ghFiles = @(
+            'streams.h','fourcc.h','mtype.h','reftime.h','renbase.h',
+            'transfrm.h','transip.h','winutil.h','wxdebug.h','wxlist.h',
+            'wxutil.h','refclock.h','sysclock.h','pstream.h','dllsetup.h',
+            'measure.h','msgthrd.h','cache.h','ctlutil.h','strmctl.h',
+            'videoctl.h','vtrans.h','winctrl.h','schedule.h','seekpt.h',
+            'source.h','pullpin.h','outputq.h','cprop.h','combase.h',
+            'amfilter.h','amextra.h'
+          )
+          foreach ($f in $ghFiles) {
+            try   { Invoke-WebRequest -Uri "$baseUrl/$f" -OutFile "$outDir/$f" -ErrorAction Stop }
+            catch { Write-Host "SKIP (github): $f" }
+          }
+
+          # Headers that live in the Windows SDK itself
+          $sdkUm     = (Resolve-Path 'C:/Program Files (x86)/Windows Kits/10/Include/10.0.*/um').Path
+          $sdkShared = (Resolve-Path 'C:/Program Files (x86)/Windows Kits/10/Include/10.0.*/shared').Path
+          foreach ($f in @('amvideo.h','audevcod.h','errors.h','evcode.h','control.h')) {
+            Copy-Item "$sdkUm/$f" "$outDir/" -ErrorAction SilentlyContinue
+          }
+          Copy-Item "$sdkShared/uuids.h" "$outDir/" -ErrorAction SilentlyContinue
+
+          # comlite.h was removed from modern SDKs — provide an empty stub
+          '// comlite.h stub: lightweight COM is now part of the standard Windows headers' |
+            Out-File "$outDir/comlite.h" -Encoding ascii
+
+      - name: Build WinDV.exe
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+
+          set BASECLASSES=Downloads\WinDV-src-1.2.3\baseclasses
+          set SRC=Downloads\WinDV-src-1.2.3\WinDV
+          set OUT=%SRC%\Release
+
+          set CFLAGS=/nologo /MD /W3 /EHsc /O2 /Zc:wchar_t- ^
+            /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" ^
+            /D "_WIN32_DCOM" /D "_CRT_SECURE_NO_WARNINGS" ^
+            /D "WINVER=0x0601" /D "_WIN32_WINNT=0x0601" ^
+            /I"%BASECLASSES%"
+
+          set LIBS=strmbase.lib legacy_stdio_definitions.lib quartz.lib ^
+            winmm.lib kernel32.lib user32.lib gdi32.lib advapi32.lib ^
+            version.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib shell32.lib
+
+          mkdir "%OUT%" 2>nul
+
+          cl %CFLAGS% /Yc"stdafx.h" /Fp"%OUT%\WinDV.pch" /Fo"%OUT%\StdAfx.obj" /c "%SRC%\StdAfx.cpp"
+          if errorlevel 1 exit /b 1
+
+          for %%f in (CaptureCfg DropFilesEdit DShow DV DVToolsDlg RecordCfg ToolTab VideoDeviceSel WinDV) do (
+            cl %CFLAGS% /Yu"stdafx.h" /Fp"%OUT%\WinDV.pch" /Fo"%OUT%\%%f.obj" /c "%SRC%\%%f.cpp"
+            if errorlevel 1 exit /b 1
+          )
+
+          rc /nologo /D "NDEBUG" /D "_AFXDLL" /fo"%OUT%\WinDV.res" "%SRC%\WinDV.rc"
+          if errorlevel 1 exit /b 1
+
+          link /nologo /SUBSYSTEM:WINDOWS /MACHINE:X86 ^
+            "%OUT%\StdAfx.obj" "%OUT%\CaptureCfg.obj" "%OUT%\DropFilesEdit.obj" ^
+            "%OUT%\DShow.obj" "%OUT%\DV.obj" "%OUT%\DVToolsDlg.obj" ^
+            "%OUT%\RecordCfg.obj" "%OUT%\ToolTab.obj" "%OUT%\VideoDeviceSel.obj" ^
+            "%OUT%\WinDV.obj" "%OUT%\WinDV.res" ^
+            %LIBS% /OUT:"%OUT%\WinDV.exe"
+          if errorlevel 1 exit /b 1
+
+          mt -nologo -manifest "%SRC%\WinDV.exe.manifest" -outputresource:"%OUT%\WinDV.exe;1"
+
+      - name: Upload WinDV.exe as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinDV-win11-compat
+          path: Downloads/WinDV-src-1.2.3/WinDV/Release/WinDV.exe
+          if-no-files-found: error
+
+      # On merge to master: also create/update a GitHub Release with the exe attached
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: WinDV 1.2.3 (Windows 11 compatible)
+          body: |
+            Automatically built from the latest master branch.
+            Download **WinDV.exe** below and run it directly — no installer needed.
+          files: Downloads/WinDV-src-1.2.3/WinDV/Release/WinDV.exe
+          make_latest: true
