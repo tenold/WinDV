@@ -335,17 +335,18 @@ BOOL CDVToolsDlg::OnInitDialog()
 	m_nSuffixDigits = AfxGetApp()->GetProfileInt("Capture", "SuffixDigits", 2);
 
 	char *delim = " \t\n";
+	char *strtok_ctx = NULL;
 	CString err;
-	LPSTR arg = strtok(AfxGetApp()->m_lpCmdLine, delim);
+	LPSTR arg = strtok_s(AfxGetApp()->m_lpCmdLine, delim, &strtok_ctx);
 	if (arg) {
 		if (strcmp(arg,"capture")==0) {
 			m_toolTab.SetCurSel(0);
 			LRESULT result;
 			OnSelchangeToolTab(NULL, &result);
-			arg = strtok(NULL, delim);
+			arg = strtok_s(NULL, delim, &strtok_ctx);
 			if (arg && strcmp(arg,"-exit")==0) {
 				m_exitOnFinish = 1;
-				arg = strtok(NULL, delim);
+				arg = strtok_s(NULL, delim, &strtok_ctx);
 			}
 			if (!arg) {
 				CString tmp; tmp.LoadString(IDS_USAGE);
@@ -387,7 +388,7 @@ timusec:
 					if (*arg) goto timerr;
 				}
 
-				arg = strtok(NULL, delim);
+				arg = strtok_s(NULL, delim, &strtok_ctx);
 				if (!arg) {
 timerr:
 					CString tmp; tmp.LoadString(IDS_USAGE);
@@ -398,7 +399,7 @@ timerr:
 					t = t * 10000000 + us;
 
 					CString file = arg;
-					arg = strtok(NULL, delim);
+					arg = strtok_s(NULL, delim, &strtok_ctx);
 					if (arg) {
 						CString tmp; tmp.LoadString(IDS_USAGE);
 						err += tmp;
@@ -423,10 +424,10 @@ timerr:
 			m_toolTab.SetCurSel(1);
 			LRESULT result;
 			OnSelchangeToolTab(NULL, &result);
-			arg = strtok(NULL, delim);
+			arg = strtok_s(NULL, delim, &strtok_ctx);
 			if (arg && strcmp(arg,"-exit")==0) {
 				m_exitOnFinish = 1;
-				arg = strtok(NULL, delim);
+				arg = strtok_s(NULL, delim, &strtok_ctx);
 			}
 			if (!arg) {
 				CString tmp; tmp.LoadString(IDS_USAGE);
@@ -437,7 +438,7 @@ timerr:
 				while (arg) {
 					if (!files.IsEmpty()) files += " | ";
 					files += arg;
-					arg = strtok(NULL, delim);
+					arg = strtok_s(NULL, delim, &strtok_ctx);
 				}
 				TRY {
 					m_FSRC.SetWindowText(files);
@@ -933,7 +934,8 @@ LRESULT CDVToolsDlg::OnDVTimeChange(WPARAM, LPARAM lParam)
 {
 	char buf[100] = "";
 	if (lParam > 0) {
-		strftime(buf, sizeof buf, "%d.%m.'%y %H:%M:%S", localtime(&lParam));
+		time_t t = (time_t)lParam;
+		strftime(buf, sizeof buf, "%d.%m.'%y %H:%M:%S", localtime(&t));
 	}
 	m_status2.SetWindowText(buf);
 	return 0;

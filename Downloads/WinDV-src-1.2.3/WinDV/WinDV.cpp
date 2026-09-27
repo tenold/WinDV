@@ -46,7 +46,9 @@ BOOL CWinDVApp::InitInstance()
 {
 	AfxEnableControlContainer();
 
-	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+	// HIGH_PRIORITY_CLASS can starve other processes on modern Windows;
+	// ABOVE_NORMAL still gives the app scheduling priority for smooth capture.
+	SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
 
 	// Standard initialization
 	// If you are not using these features and wish to reduce the size
